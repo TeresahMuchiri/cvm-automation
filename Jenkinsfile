@@ -1,35 +1,50 @@
 pipeline {
     agent any
 
-    triggers {
-        cron('H 9 * * *')
-    }
-
     stages {
-        stage('Example') {
+
+        stage('Setup Environment') {
             steps {
-                echo 'Example step'
+                sh '''
+                python3 -m venv venv
+                . venv/bin/activate
+                pip install -r requirements.txt
+                '''
             }
         }
-    }
-}
-stage('Archive Logs') {
-    steps {
-        archiveArtifacts artifacts: 'data/campaign_log.txt', fingerprint: true
-    }
-}
 
-stage('Track Results') {
-    steps {
-        sh '''
-        . venv/bin/activate
-        python scripts/track_results.py
-        '''
-    }
-}
+        stage('Generate Offers') {
+            steps {
+                sh '''
+                . venv/bin/activate
+                python scripts/generate_offers.py
+                '''
+            }
+        }
 
-stage('Archive Results') {
-    steps {
-        archiveArtifacts artifacts: 'data/*.csv', fingerprint: true
+        stage('Send Campaign') {
+            steps {
+                sh '''
+                . venv/bin/activate
+                python scripts/send_campaign.py
+                '''
+            }
+        }
+
+        stage('Track Results') {
+            steps {
+                sh '''
+                . venv/bin/activate
+                python scripts/track_results.py
+                '''
+            }
+        }
+
+        stage('Archive Logs') {
+            steps {
+                archiveArtifacts artifacts: 'data/*.csv', fingerprint: true
+            }
+        }
+
     }
 }
